@@ -1,11 +1,11 @@
 export interface TokenDetail {
   asset: string;
   from: string;
-  to: string;
+  to?: string;
   timestamp: string; // ISO date string
-  value: string;
-  hash: string;
-  blockNum: string;
+  value?: string;
+  hash?: string;
+  blockNum?: string;
   metadata?: {
     blockTimestamp?: string;
     decimal?: string;
@@ -95,17 +95,12 @@ export function checkPhishingTokenNames(transfers: any[]): Flag | null {
   if (suspicious.length > 0) {
     return {
       type: "PHISHING_AIRDROP",
-      severity: "high",
+      severity: suspicious.length >= 10 ? "high" : suspicious.length >= 3 ? "medium" : "low",
       message: `Received ${suspicious.length} token(s) with phishing-style names (e.g. "${suspicious[0].asset}")`,
-      details: suspicious.map((t) => ({
+        details: suspicious.map((t) => ({
         asset: t.asset,
         from: t.from,
-        to: t.to,
-        timestamp: t.metadata?.blockTimestamp || new Date().toISOString(),
-        value: t.value?.toString() || "0",
-        hash: t.hash || "",
-        blockNum: t.blockNum || "",
-        metadata: t.metadata,
+        timestamp: new Date(parseInt(t.timeStamp) * 1000).toISOString(),
       })),
     };
   }
