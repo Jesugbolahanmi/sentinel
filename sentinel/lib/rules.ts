@@ -92,19 +92,39 @@ export function checkPhishingTokenNames(transfers: any[]): Flag | null {
     );
   });
 
-  if (suspicious.length > 0) {
-    return {
-      type: "PHISHING_AIRDROP",
-      severity: suspicious.length >= 10 ? "high" : suspicious.length >= 3 ? "medium" : "low",
-      message: `Received ${suspicious.length} token(s) with phishing-style names (e.g. "${suspicious[0].asset}")`,
-        details: suspicious.map((t) => ({
-        asset: t.asset,
-        from: t.from,
-        timestamp: new Date(parseInt(t.timeStamp) * 1000).toISOString(),
-      })),
-    };
-  }
-  return null;
+  if (suspicious.length === 0) return null;
+
+  // dangerous lure patterns: active links (t.me, http/https, URLs) or urgency language
+  // these are HIGH regardless of count, since the risk is "will someone click this," not volume
+  const hasActiveLure = suspicious.some((t) => {
+    const asset = (t.asset || "").toLowerCase();
+    return (
+      asset.includes("t.me") ||
+      asset.includes("http") ||
+      asset.includes("claim until") ||
+      asset.includes("claim before") ||
+      /\*.*claim/.test(asset)
+    );
+  });
+
+  const severity = hasActiveLure
+    ? "high"
+    : suspicious.length >= 10
+    ? "high"
+    : suspicious.length >= 3
+    ? "medium"
+    : "low";
+
+  return {
+    type: "PHISHING_AIRDROP",
+    severity,
+    message: `Received ${suspicious.length} token(s) with phishing-style names (e.g. "${suspicious[0].asset}")${hasActiveLure ? " — includes active scam links/urgency lures" : ""}`,
+    details: suspicious.map((t) => ({
+      asset: t.asset,
+      from: t.from,
+      timestamp: new Date(parseInt(t.timeStamp) * 1000).toISOString(),
+    })),
+  };
 }
 
 export function runAllChecks(transactions: any[], address: string): Flag[] {

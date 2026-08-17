@@ -24,10 +24,15 @@ export default function Scan() {
   const { address: walletAddress, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
-  
+
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
   useEffect(() => {
-  setMounted(true);
-}, []);
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!loading) return;
     setCurrentStep(0);
@@ -46,6 +51,7 @@ export default function Scan() {
   useEffect(() => {
     if (!result) return;
     setDisplayScore(0);
+    setChatMessages([]);
     const timer = setTimeout(() => setDisplayScore(result.report.riskScore), 100);
     return () => clearTimeout(timer);
   }, [result]);
@@ -73,6 +79,43 @@ export default function Scan() {
     }
   }
 
+  async function handleChatSend() {
+    if (!chatInput.trim() || !result) return;
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    const newMessages = [...chatMessages, { role: "user", content: userMessage }];
+    setChatMessages(newMessages);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          context: {
+            address: result.address,
+            riskScore: result.report.riskScore,
+            threatLevel: result.report.threatLevel,
+            summary: result.report.summary,
+            flags: result.flags,
+          },
+          history: chatMessages,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChatMessages([...newMessages, { role: "assistant", content: data.reply }]);
+      } else {
+        setChatMessages([...newMessages, { role: "assistant", content: "Sorry, I couldn't process that." }]);
+      }
+    } catch (err) {
+      setChatMessages([...newMessages, { role: "assistant", content: "Failed to reach the server." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   const severityColor = (level: string) => {
     if (level === "CRITICAL" || level === "HIGH") return "#FF3B3B";
     if (level === "MEDIUM") return "#FFB020";
@@ -92,7 +135,7 @@ export default function Scan() {
         </Link>
 
         <div className="flex justify-end mb-4">
-          {isConnected ? (
+          {!mounted ? null : isConnected ? (
             <div className="flex items-center gap-3 bg-[#12151C] border border-[#242938] rounded px-4 py-2">
               <span className="w-2 h-2 rounded-full bg-[#34D399]" />
               <span className="font-[family-name:var(--font-mono)] text-xs text-[#B4B9C4]">
@@ -234,7 +277,7 @@ export default function Scan() {
                   ))}
                 </ul>
                 {result.report.revokeUrl ? (
-                  <a
+                    <a
                     href={result.report.revokeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -264,7 +307,7 @@ export default function Scan() {
                         <span className="text-[#B4B9C4]">{flag.message}</span>
                       </div>
                       {flag.details && flag.details.length > 0 ? (
-                        <div className="mt-3 ml-0 space-y-2 max-h-96 overflow-y-auto">
+                        <div className="mt-3 space-y-2 max-h-96 overflow-y-auto">
                           {flag.details.slice(0, 15).map((d: any, j: number) => {
                             const timestamp = new Date(d.timestamp);
                             const timeString = timestamp.toLocaleString();
@@ -285,16 +328,20 @@ export default function Scan() {
                                     <span className="text-[#7C8394]">TO:</span>
                                     <span>{address}</span>
                                   </div>
-                                  {d.value && <div className="flex justify-between">
-                                    <span className="text-[#7C8394]">VALUE:</span>
-                                    <span>{d.value}</span>
-                                  </div>}
-                                  {d.hash && <div className="flex justify-between">
-                                    <span className="text-[#7C8394]">HASH:</span>
-                                    <a href={`https://basescan.org/tx/${d.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline truncate max-w-xs">
-                                      {d.hash.slice(0, 10)}...{d.hash.slice(-8)}
-                                    </a>
-                                  </div>}
+                                  {d.value ? (
+                                    <div className="flex justify-between">
+                                      <span className="text-[#7C8394]">VALUE:</span>
+                                      <span>{d.value}</span>
+                                    </div>
+                                  ) : null}
+                                  {d.hash ? (
+                                    <div className="flex justify-between">
+                                      <span className="text-[#7C8394]">HASH:</span>
+                                      <a href={`https://basescan.org/tx/${d.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline truncate max-w-xs">
+                                        {d.hash.slice(0, 10)}...{d.hash.slice(-8)}
+                                      </a>
+                                    </div>
+                                  ) : null}
                                 </div>
                               </div>
                             );
@@ -322,7 +369,7 @@ export default function Scan() {
                     <div key={i} className="bg-[#0A0C10] border border-[#242938] rounded p-3">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-[#7C8394]">HOP {i + 1}</span>
-                        {hop.outflowTo && <span className="text-[#FF3B3B]">OUTFLOW DETECTED</span>}
+                        {hop.outflowTo ? <span className="text-[#FF3B3B]">OUTFLOW DETECTED</span> : null}
                       </div>
                       <div className="space-y-1 text-[#B4B9C4]">
                         <div className="flex justify-between">
@@ -331,7 +378,7 @@ export default function Scan() {
                             {hop.address}
                           </a>
                         </div>
-                        {hop.outflowTo && (
+                        {hop.outflowTo ? (
                           <>
                             <div className="flex justify-between">
                               <span className="text-[#7C8394]">SENT_TO:</span>
@@ -344,13 +391,71 @@ export default function Scan() {
                               <span className="text-[#FF3B3B] font-bold">{hop.outflowAmount} ETH</span>
                             </div>
                           </>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            <div className="bg-[#12151C] border border-[#242938] rounded p-6">
+              <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-3">
+                ASK_SENTINEL
+              </h3>
+
+              {chatMessages.length > 0 ? (
+                <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
+                  {chatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
+                    >
+                      <div
+                        className={
+                          "max-w-[85%] rounded p-3 text-sm " +
+                          (msg.role === "user"
+                            ? "bg-[#38BDF8]/10 text-[#E6E8EC]"
+                            : "bg-[#0A0C10] text-[#B4B9C4] border border-[#242938]")
+                        }
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading ? (
+                    <div className="flex justify-start">
+                      <div className="bg-[#0A0C10] border border-[#242938] rounded p-3 text-sm text-[#7C8394] font-[family-name:var(--font-mono)]">
+                        thinking<span className="animate-blink">...</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-[#4a5063] text-sm mb-4">
+                  Ask Sentinel a follow-up question about this investigation — e.g. "should I be worried?" or "what does the outflow mean?"
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
+                  placeholder="Ask a question..."
+                  disabled={chatLoading}
+                  className="flex-1 bg-[#0A0C10] border border-[#242938] rounded px-4 py-2 text-[#E6E8EC] placeholder-[#4a5063] font-[family-name:var(--font-mono)] text-sm focus:outline-none focus:border-[#38BDF8] transition-colors"
+                />
+                <button
+                  onClick={handleChatSend}
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="bg-[#38BDF8] hover:bg-[#5fd1ff] disabled:bg-[#242938] disabled:text-[#4a5063] disabled:cursor-not-allowed text-black rounded px-4 py-2 text-sm font-semibold font-[family-name:var(--font-mono)] transition-colors"
+                >
+                  SEND
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
