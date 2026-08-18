@@ -142,5 +142,47 @@ export function runAllChecks(transactions: any[], address: string): Flag[] {
   const phishingFlag = checkPhishingTokenNames(transactions);
   if (phishingFlag) flags.push(phishingFlag);
 
+  const dustingFlag = checkDustingPattern(transactions, address);
+  if (dustingFlag) flags.push(dustingFlag);
+
   return flags;
+}
+
+export function checkDustingPattern(transactions: any[], address: string): Flag | null {
+  const outgoing = transactions.filter(
+    (tx) => tx.from.toLowerCase() === address.toLowerCase()
+  );
+
+  if (outgoing.length < 5) return null;
+
+  // group by approximate value (rounded to handle tiny variations) and by asset
+  const valueGroups: Record<string, any[]> = {};
+
+  for (const tx of outgoing) {
+    const roundedValue = Math.round(Number(tx.value) * 1000) / 1000; // round to avoid float noise
+    const key = `${tx.asset || "ETH"}_${roundedValue}`;
+    if (!valueGroups[key]) valueGroups[key] = [];
+    valueGroups[key].push(tx);
+  }
+
+  for (const key in valueGroups) {
+    const group = valueGroups[key];
+    const uniqueRecipients = new Set(group.map((tx) => tx.to.toLowerCase()));
+
+    // same near-identical amount sent to 5+ distinct addresses = dusting pattern
+    if (group.length >= 5 && uniqueRecipients.size >= 5) {
+      return {
+        type: "DUSTING_PATTERN",
+        severity: "high",
+        message: `Sent the same amount (${group[0].asset || "ETH"}) to ${uniqueRecipients.size} different addresses — a pattern typical of dusting/scam-tagging campaigns`,
+        details: group.slice(0, 15).map((t) => ({
+          asset: t.asset || "ETH",
+          from: t.to, // showing recipient here since this flag is about outgoing spray
+          timestamp: new Date(parseInt(t.timeStamp) * 1000).toISOString(),
+        })),
+      };
+    }
+  }
+
+  return null;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWalletTransactions } from "@/lib/basescan";
+import { getWalletTransactions, classifyAddress } from "@/lib/basescan";
 import { runAllChecks } from "@/lib/rules";
 import { generateThreatReport } from "@/lib/report";
 import { traceFunds } from "@/lib/trace";
@@ -15,16 +15,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const classification = await classifyAddress(address);
+
+    if (!classification.valid) {
+      return NextResponse.json(
+        { error: classification.reason },
+        { status: 400 }
+      );
+    }
+
+    if (!classification.hasActivity) {
+      return NextResponse.json(
+        { error: classification.reason },
+        { status: 400 }
+      );
+    }
+
     const transactions = await getWalletTransactions(address);
     const flags = runAllChecks(transactions, address);
     const report = await generateThreatReport(address, flags);
 
-    // only trace funds if there's actually a large outflow to follow
     const hasOutflow = flags.some((f) => f.type === "LARGE_OUTFLOW");
     const trail = hasOutflow ? await traceFunds(address, 3) : [];
 
     return NextResponse.json({
       address,
+      isContract: classification.isContract,
       flags,
       report,
       trail,

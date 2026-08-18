@@ -73,3 +73,54 @@ export async function isContract(address: string) {
   const code = await alchemyCall("eth_getCode", [address, "latest"]);
   return code && code !== "0x";
 }
+
+export async function getApprovalEvents(address: string) {
+  // ERC-20 Approval event topic: Approval(address indexed owner, address indexed spender, uint256 value)
+  const APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+
+  const paddedAddress = "0x" + address.slice(2).padStart(64, "0");
+
+  const logs = await alchemyCall("eth_getLogs", [{
+    fromBlock: "0x0",
+    toBlock: "latest",
+    topics: [APPROVAL_TOPIC, paddedAddress],
+  }]);
+
+  return logs || [];
+}
+
+export async function classifyAddress(address: string) {
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    return { valid: false, reason: "Not a valid address format (must be 0x followed by 40 hex characters)." };
+  }
+
+  const code = await alchemyCall("eth_getCode", [address, "latest"]);
+  const isContractAddr = code && code !== "0x";
+
+  const [outgoing, incoming] = await Promise.all([
+    alchemyCall("alchemy_getAssetTransfers", [{
+      fromBlock: "0x0",
+      fromAddress: address,
+      category: ["external", "erc20"],
+      maxCount: "0x1",
+    }]),
+    alchemyCall("alchemy_getAssetTransfers", [{
+      fromBlock: "0x0",
+      toAddress: address,
+      category: ["external", "erc20"],
+      maxCount: "0x1",
+    }]),
+  ]);
+
+  const hasActivity =
+    (outgoing?.transfers?.length || 0) > 0 || (incoming?.transfers?.length || 0) > 0;
+
+  return {
+    valid: true,
+    isContract: isContractAddr,
+    hasActivity,
+    reason: !hasActivity
+      ? "This address has no recorded activity on Base — it may be unused, new, or on a different network."
+      : null,
+  };
+}
