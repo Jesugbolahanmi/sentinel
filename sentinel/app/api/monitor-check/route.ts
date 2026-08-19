@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     for (const watch of watches) {
       const transactions = await getWalletTransactions(watch.address);
-      const flags = runAllChecks(transactions, watch.address);
+      const flags = await runAllChecks(transactions, watch.address);
 
       const previousFlagTypes = (watch.last_flags || []).map((f: any) => f.type);
       const newFlags = flags.filter((f) => !previousFlagTypes.includes(f.type));
