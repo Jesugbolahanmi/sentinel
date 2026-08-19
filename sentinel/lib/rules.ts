@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export interface TokenDetail {
   asset: string;
   from: string;
@@ -127,7 +129,7 @@ export function checkPhishingTokenNames(transfers: any[]): Flag | null {
   };
 }
 
-export function runAllChecks(transactions: any[], address: string): Flag[] {
+export async function runAllChecks(transactions: any[], address: string): Promise<Flag[]> {
   const flags: Flag[] = [];
 
   const ageFlag = checkWalletAge(transactions);
@@ -144,6 +146,9 @@ export function runAllChecks(transactions: any[], address: string): Flag[] {
 
   const dustingFlag = checkDustingPattern(transactions, address);
   if (dustingFlag) flags.push(dustingFlag);
+
+  const blocklistFlag = await checkBlocklist(transactions);
+  if (blocklistFlag) flags.push(blocklistFlag);
 
   return flags;
 }
@@ -182,6 +187,42 @@ export function checkDustingPattern(transactions: any[], address: string): Flag 
         })),
       };
     }
+  }
+
+  return null;
+}
+
+export async function checkBlocklist(transactions: any[]): Promise<Flag | null> {
+  const { data: blocklist, error } = await supabase.from("blocklist").select("address, reason");
+
+  if (error || !blocklist || blocklist.length === 0) return null;
+
+  const blockedSet = new Set(blocklist.map((b: any) => b.address.toLowerCase()));
+
+  const matches = transactions.filter(
+    (tx) =>
+      blockedSet.has(tx.from?.toLowerCase()) || blockedSet.has(tx.to?.toLowerCase())
+  );
+
+  if (matches.length > 0) {
+    const matchedAddress = blockedSet.has(matches[0].from?.toLowerCase())
+      ? matches[0].from
+      : matches[0].to;
+
+    const reason = blocklist.find(
+      (b: any) => b.address.toLowerCase() === matchedAddress.toLowerCase()
+    )?.reason;
+
+    return {
+      type: "BLOCKLIST_MATCH",
+      severity: "high",
+      message: `Interacted with a known malicious address (${matchedAddress.slice(0, 6)}...${matchedAddress.slice(-4)}) — ${reason || "flagged by Sentinel"}`,
+      details: matches.slice(0, 10).map((t) => ({
+        asset: t.asset || "ETH",
+        from: t.from,
+        timestamp: new Date(parseInt(t.timeStamp) * 1000).toISOString(),
+      })),
+    };
   }
 
   return null;

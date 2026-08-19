@@ -68,6 +68,10 @@ export async function getTokenApprovals(address: string) {
   // reuse the same transfer data for MVP - real approval events come later
   return getWalletTransactions(address);
 }
+export async function getTokenMetadata(address: string) {
+  const metadata = await alchemyCall("alchemy_getTokenMetadata", [address]);
+  return metadata;
+}
 
 export async function isContract(address: string) {
   const code = await alchemyCall("eth_getCode", [address, "latest"]);
@@ -124,3 +128,20 @@ export async function classifyAddress(address: string) {
       : null,
   };
 }
+
+export async function getTokenMarketData(address: string) {
+  const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+  const data = await res.json();
+  const pair = data?.pairs?.[0];
+
+  if (!pair) return null;
+
+  return {
+    priceUsd: pair.priceUsd,
+    liquidityUsd: pair.liquidity?.usd,
+    marketCap: pair.marketCap,
+    fdv: pair.fdv,
+    dexUrl: pair.url,
+  };
+}
+

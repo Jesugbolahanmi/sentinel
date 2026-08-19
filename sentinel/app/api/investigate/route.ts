@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const transactions = await getWalletTransactions(address);
-    const flags = runAllChecks(transactions, address);
+    const flags = await runAllChecks(transactions, address);
     const report = await generateThreatReport(address, flags);
 
     const hasOutflow = flags.some((f) => f.type === "LARGE_OUTFLOW");
