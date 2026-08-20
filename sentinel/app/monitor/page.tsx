@@ -1,18 +1,25 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 
 const BOT_USERNAME = "sentinel_jesugbolahanmi_bot";
 
-export default function Monitor() {
+function MonitorForm() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [addedAddress, setAddedAddress] = useState("");
   const { address: walletAddress, isConnected } = useAccount();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const prefill = searchParams.get("address");
+    if (prefill) setAddress(prefill);
+  }, [searchParams]);
 
   async function handleWatch() {
     setLoading(true);
@@ -100,7 +107,7 @@ export default function Monitor() {
               <p className="text-[#B4B9C4]">
                 Last step — connect Telegram so Sentinel can actually reach you:
               </p>
-              <a
+               <a
                 href={telegramLink}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -119,5 +126,12 @@ export default function Monitor() {
         </div>
       </div>
     </main>
+  );
+}
+export default function Monitor() {
+  return (
+    <Suspense fallback={null}>
+      <MonitorForm />
+    </Suspense>
   );
 }

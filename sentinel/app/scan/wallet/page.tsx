@@ -263,6 +263,13 @@ export default function Scan() {
               </div>
             </div>
 
+              <Link
+              href={`/monitor?address=${address}`}
+              className="inline-flex items-center gap-2 bg-[#12151C] hover:bg-[#1a1e28] border border-[#242938] hover:border-[#38BDF8] text-[#38BDF8] rounded px-4 py-2 text-sm font-semibold font-[family-name:var(--font-mono)] transition-colors"
+            >
+              $ monitor --wallet →
+            </Link>
+
             {result.report.recommendations && (
               <div className="bg-[#12151C] border border-[#242938] rounded p-6">
                 <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-3">
