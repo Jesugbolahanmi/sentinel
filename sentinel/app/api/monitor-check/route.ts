@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getWalletTransactions } from "@/lib/basescan";
 import { runAllChecks } from "@/lib/rules";
-import { BrevoClient } from "@getbrevo/brevo";
 
-const brevo = new BrevoClient({
-  apiKey: process.env.BREVO_API_KEY!,
-});
+const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+
+async function sendTelegramAlert(chatId: number, address: string, newFlags: any[]) {
+  const lines = newFlags
+    .map((f) => `• <b>[${f.severity.toUpperCase()}]</b> ${f.message}`)
+    .join("\n");
+
+  const text = `🚨 <b>Sentinel Alert</b>\nWallet: <code>${address}</code>\n\n${lines}`;
+
+  await fetch(`${TELEGRAM_API}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+  });
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,25 +40,20 @@ export async function GET(req: NextRequest) {
       const newFlags = flags.filter((f) => !previousFlagTypes.includes(f.type));
 
       if (newFlags.length > 0) {
-        await brevo.transactionalEmails.sendTransacEmail({
-          subject: `Sentinel Alert: New activity on ${watch.address.slice(0, 6)}...${watch.address.slice(-4)}`,
-          htmlContent: `
-            <h2>Sentinel detected new activity</h2>
-            <p><strong>Wallet:</strong> ${watch.address}</p>
-            <ul>
-              ${newFlags.map((f) => `<li><strong>[${f.severity.toUpperCase()}]</strong> ${f.message}</li>`).join("")}
-            </ul>
-          `,
-          sender: { name: "Sentinel", email: process.env.BREVO_FROM_EMAIL! },
-          to: [{ email: watch.email }],
-        });
+        if (watch.telegram_chat_id) {
+          await sendTelegramAlert(watch.telegram_chat_id, watch.address, newFlags);
+        }
 
         await supabase
           .from("watched_wallets")
           .update({ last_flags: flags })
           .eq("id", watch.id);
 
-        results.push({ address: watch.address, alerted: true, newFlags: newFlags.length });
+        results.push({
+          address: watch.address,
+          alerted: !!watch.telegram_chat_id,
+          newFlags: newFlags.length,
+        });
       } else {
         results.push({ address: watch.address, alerted: false });
       }

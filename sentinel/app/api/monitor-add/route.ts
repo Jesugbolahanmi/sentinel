@@ -3,18 +3,27 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, email } = await req.json();
+    const { address } = await req.json();
 
-    if (!address || !email) {
-      return NextResponse.json(
-        { error: "Address and email are required" },
-        { status: 400 }
-      );
+    if (!address) {
+      return NextResponse.json({ error: "Address is required" }, { status: 400 });
+    }
+
+    const normalized = address.toLowerCase();
+
+    const { data: existing } = await supabase
+      .from("watched_wallets")
+      .select("*")
+      .eq("address", normalized)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ success: true, watch: existing });
     }
 
     const { data, error } = await supabase
       .from("watched_wallets")
-      .insert([{ address, email, last_flags: [] }])
+      .insert([{ address: normalized, last_flags: [] }])
       .select();
 
     if (error) {
