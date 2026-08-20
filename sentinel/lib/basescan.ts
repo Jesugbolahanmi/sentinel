@@ -145,3 +145,9 @@ export async function getTokenMarketData(address: string) {
   };
 }
 
+export async function getNFTMetadata(address: string) {
+  const url = `https://base-mainnet.g.alchemy.com/nft/v3/${process.env.ALCHEMY_API_KEY}/getContractMetadata?contractAddress=${address}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data;
+}
