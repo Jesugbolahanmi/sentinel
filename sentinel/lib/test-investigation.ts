@@ -15,7 +15,7 @@ async function testInvestigation() {
     console.log(`✓ Got ${transactions.length} transactions`);
 
     console.log("\nStep 2: Running checks...");
-    const flags = runAllChecks(transactions, address);
+    const flags = await runAllChecks(transactions, address);
     console.log(`✓ Found ${flags.length} flags`);
 
     console.log("\nStep 3: Generating threat report...");

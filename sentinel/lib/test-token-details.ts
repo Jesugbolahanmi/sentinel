@@ -13,7 +13,7 @@ async function testTokenDetails() {
     console.log(`✓ Got ${transactions.length} transactions\n`);
 
     console.log("Running checks to generate flags...");
-    const flags = runAllChecks(transactions, address);
+    const flags = await runAllChecks(transactions, address);
     console.log(`✓ Found ${flags.length} flags\n`);
 
     // Display phishing flag details with timestamps and sender info
