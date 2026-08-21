@@ -20,7 +20,7 @@ export function getThreatLevel(score: number): string {
   return "LOW";
 }
 
-export async function generateThreatReport(address: string, flags: Flag[]) {
+export async function generateThreatReport(address: string, flags: Flag[], entityType: "wallet" | "token" = "wallet") {
   const riskScore = calculateRiskScore(flags);
   const threatLevel = getThreatLevel(riskScore);
 
@@ -28,7 +28,7 @@ export async function generateThreatReport(address: string, flags: Flag[]) {
     return {
       riskScore,
       threatLevel,
-      summary: "No significant threat indicators found in recent wallet activity.",
+      summary: `No significant threat indicators found in recent ${entityType} activity.`,
       recommendations: ["No immediate action needed."],
       revokeUrl: getRevokeLink(address),
     };
@@ -36,9 +36,9 @@ export async function generateThreatReport(address: string, flags: Flag[]) {
 
   const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
-  const prompt = `You are Sentinel, an AI Web3 incident-response agent. A deterministic scoring system has already calculated this wallet's risk score and threat level from its flagged activity — do not invent or change these numbers, only explain them.
+  const prompt = `You are Sentinel, an AI Web3 incident-response agent. A deterministic scoring system has already calculated this ${entityType}'s risk score and threat level from its flagged activity — do not invent or change these numbers, only explain them.
 
-Wallet: ${address}
+${entityType.charAt(0).toUpperCase() + entityType.slice(1)}: ${address}
 Calculated risk score: ${riskScore}/100
 Calculated threat level: ${threatLevel}
 
@@ -51,16 +51,28 @@ Respond ONLY with valid JSON in this exact shape, no markdown formatting, no cod
   "recommendations": ["<specific action 1>", "<specific action 2>"]
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const cleaned = text.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  const parsed = JSON.parse(cleaned);
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonString = jsonMatch ? jsonMatch[0] : text;
+    const parsed = JSON.parse(jsonString);
 
-  return {
-    riskScore,
-    threatLevel,
-    summary: parsed.summary,
-    recommendations: parsed.recommendations,
-    revokeUrl: getRevokeLink(address),
-  };
+    return {
+      riskScore,
+      threatLevel,
+      summary: parsed.summary || "Investigation complete. Review the flagged security risks.",
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ["Review flagged interactions and revoke unnecessary token approvals."],
+      revokeUrl: getRevokeLink(address),
+    };
+  } catch (err) {
+    console.error("AI report generation failed, using fallback summary:", err);
+    return {
+      riskScore,
+      threatLevel,
+      summary: `Investigation detected ${flags.length} potential security flag(s) with an overall threat level of ${threatLevel}.`,
+      recommendations: ["Review unrevoked token approvals immediately.", "Disconnect any untrusted dApps."],
+      revokeUrl: getRevokeLink(address),
+    };
+  }
 }

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { ActiveApproval, DetectedPermit } from "./approvals";
 
 export interface TokenDetail {
   asset: string;
@@ -129,7 +130,77 @@ export function checkPhishingTokenNames(transfers: any[]): Flag | null {
   };
 }
 
-export async function runAllChecks(transactions: any[], address: string): Promise<Flag[]> {
+export function checkApprovalRisks(
+  approvals: ActiveApproval[] = [],
+  permits: DetectedPermit[] = []
+): Flag[] {
+  const flags: Flag[] = [];
+
+  // Check for EOA approvals (approving a non-contract account)
+  const eoaApprovals = approvals.filter((a) => !a.spenderIsContract);
+  if (eoaApprovals.length > 0) {
+    flags.push({
+      type: "EOA_APPROVAL",
+      severity: "high",
+      message: `Granted token spending approval to ${eoaApprovals.length} Externally Owned Account(s) (non-contract) — legitimate protocols rarely use EOAs as spenders.`,
+      details: eoaApprovals.map((a) => ({
+        asset: `${a.tokenSymbol} (${a.allowanceFormatted})`,
+        from: a.spender,
+        timestamp: new Date().toISOString(),
+      })),
+    });
+  }
+
+  // Check for unlimited approvals
+  const unlimitedApprovals = approvals.filter((a) => a.isUnlimited);
+  if (unlimitedApprovals.length > 0) {
+    flags.push({
+      type: "UNLIMITED_APPROVAL",
+      severity: unlimitedApprovals.length >= 3 || eoaApprovals.length > 0 ? "high" : "medium",
+      message: `Wallet has ${unlimitedApprovals.length} active unlimited token approval(s) — tokens can be drained at any time if the spender contract is exploited or malicious.`,
+      details: unlimitedApprovals.map((a) => ({
+        asset: `${a.tokenSymbol} (UNLIMITED)`,
+        from: a.spender,
+        timestamp: new Date().toISOString(),
+      })),
+    });
+  } else if (approvals.length >= 3) {
+    flags.push({
+      type: "EXPOSED_APPROVALS",
+      severity: "medium",
+      message: `Wallet maintains ${approvals.length} active unrevoked token allowances across contracts.`,
+      details: approvals.map((a) => ({
+        asset: `${a.tokenSymbol} (${a.allowanceFormatted})`,
+        from: a.spender,
+        timestamp: new Date().toISOString(),
+      })),
+    });
+  }
+
+  // Check for permit executions
+  if (permits.length > 0) {
+    flags.push({
+      type: "PERMIT_DETECTED",
+      severity: "medium",
+      message: `Detected ${permits.length} direct offchain/onchain permit signature execution(s) (EIP-2612 / DAI-Permit) granting token allowances.`,
+      details: permits.map((p) => ({
+        asset: p.type,
+        from: p.to,
+        hash: p.txHash,
+        timestamp: p.timestamp || new Date().toISOString(),
+      })),
+    });
+  }
+
+  return flags;
+}
+
+export async function runAllChecks(
+  transactions: any[],
+  address: string,
+  approvals: ActiveApproval[] = [],
+  permits: DetectedPermit[] = []
+): Promise<Flag[]> {
   const flags: Flag[] = [];
 
   const ageFlag = checkWalletAge(transactions);
@@ -149,6 +220,9 @@ export async function runAllChecks(transactions: any[], address: string): Promis
 
   const blocklistFlag = await checkBlocklist(transactions);
   if (blocklistFlag) flags.push(blocklistFlag);
+
+  const approvalFlags = checkApprovalRisks(approvals, permits);
+  flags.push(...approvalFlags);
 
   return flags;
 }

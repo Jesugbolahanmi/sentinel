@@ -14,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sentinel",
-  description: "AI Web3 Incident Response Agent",
+  title: "Sentinel — AI Web3 Incident Response",
+  description: "An AI-powered incident response agent for Web3. Scan wallets, tokens, and NFT collections on Base for onchain threats, suspicious approvals, and fund trail risks.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} bg-[#0A0C10]`}>
+      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} bg-[#050505] m-0 p-0`}>
         <Providers>{children}</Providers>
       </body>
     </html>

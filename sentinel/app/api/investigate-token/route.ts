@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const firstTxTimestamp = oldestTx ? parseInt(oldestTx.timeStamp) * 1000 : null;
 
     const flags = runTokenChecks(metadata, firstTxTimestamp);
-    const report = await generateThreatReport(address, flags);
+    const report = await generateThreatReport(address, flags, "token");
 
     return NextResponse.json({
       address,

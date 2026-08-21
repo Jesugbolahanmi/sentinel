@@ -3,6 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { 
+  ArrowLeft, Search, Activity, ShieldAlert, ShieldCheck, 
+  Wallet, Shield, CheckCircle2, AlertTriangle, Key, Send,
+  Cpu, FileCode2, History, ChevronRight
+} from "lucide-react";
 
 const INVESTIGATION_STEPS = [
   "Connecting to Base network...",
@@ -13,7 +18,7 @@ const INVESTIGATION_STEPS = [
   "Compiling threat report...",
 ];
 
-export default function Scan() {
+export default function WalletScan() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -21,6 +26,7 @@ export default function Scan() {
   const [error, setError] = useState("");
   const [displayScore, setDisplayScore] = useState(0);
   const [mounted, setMounted] = useState(false);
+  
   const { address: walletAddress, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -99,6 +105,8 @@ export default function Scan() {
             threatLevel: result.report.threatLevel,
             summary: result.report.summary,
             flags: result.flags,
+            activeApprovals: result.activeApprovals,
+            permits: result.permits,
           },
           history: chatMessages,
         }),
@@ -122,30 +130,41 @@ export default function Scan() {
     return "#34D399";
   };
 
-  const circumference = 2 * Math.PI * 54;
+  const severityGlow = (level: string) => {
+    if (level === "CRITICAL" || level === "HIGH") return "rgba(255, 59, 59, 0.5)";
+    if (level === "MEDIUM") return "rgba(255, 176, 32, 0.5)";
+    return "rgba(52, 211, 153, 0.5)";
+  };
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/"
-          className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] hover:text-[#E6E8EC] transition-colors mb-8 inline-block"
-        >
-          ← back
-        </Link>
+    <main className="min-h-screen px-4 sm:px-6 py-8 sm:py-10 relative overflow-hidden bg-[#050505]">
+      {/* Background Cyber-grid */}
+      <div className="absolute inset-0 z-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-10 pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#38BDF8] opacity-10 blur-[120px] rounded-full pointer-events-none" />
 
-        <div className="flex justify-end mb-4">
+      <div className="max-w-4xl mx-auto relative z-10">
+        
+        {/* Top Navbar / Connect Wallet */}
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-8">
+          <Link
+            href="/scan"
+            className="group flex items-center gap-2 font-[family-name:var(--font-mono)] text-xs text-[#7C8394] hover:text-[#38BDF8] transition-colors w-fit"
+          >
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
+            RETURN TO DASHBOARD
+          </Link>
+
           {!mounted ? null : isConnected ? (
-            <div className="flex items-center gap-3 bg-[#12151C] border border-[#242938] rounded px-4 py-2">
-              <span className="w-2 h-2 rounded-full bg-[#34D399]" />
-              <span className="font-[family-name:var(--font-mono)] text-xs text-[#B4B9C4]">
+            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-4 py-2">
+              <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
+              <span className="font-[family-name:var(--font-mono)] text-xs text-[#B4B9C4] font-bold">
                 {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
               </span>
               <button
                 onClick={() => disconnect()}
-                className="text-xs text-[#7C8394] hover:text-[#FF3B3B] transition-colors ml-2"
+                className="text-xs text-[#7C8394] hover:text-[#FF3B3B] transition-colors ml-2 font-[family-name:var(--font-mono)]"
               >
-                disconnect
+                [disconnect]
               </button>
             </div>
           ) : (
@@ -154,63 +173,87 @@ export default function Scan() {
                 <button
                   key={connector.uid}
                   onClick={() => connect({ connector })}
-                  className="bg-[#12151C] border border-[#242938] hover:border-[#38BDF8] rounded px-4 py-2 text-xs font-[family-name:var(--font-mono)] text-[#B4B9C4] transition-colors"
+                  className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-[#38BDF8]/50 hover:bg-white/10 rounded-full px-4 py-2 text-xs font-[family-name:var(--font-mono)] text-white font-bold transition-colors"
                 >
-                  {connector.name}
+                  Connect {connector.name}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-3 mb-8">
-          <span className="w-2 h-2 rounded-full bg-[#34D399] animate-blink" />
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-[#E6E8EC]">
-            SENTINEL
-          </h1>
-          <span className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394]">
-            / scan
-          </span>
+        {/* Header section */}
+        <div className="flex flex-col gap-2 mb-10">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center w-3 h-3">
+              <span className="absolute w-full h-full rounded-full bg-[#38BDF8] opacity-75 animate-ping" />
+              <span className="relative w-2 h-2 rounded-full bg-[#38BDF8]" />
+            </div>
+            <h1 className="font-[family-name:var(--font-display)] text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+              WALLET SCANNER
+            </h1>
+          </div>
+          <p className="font-[family-name:var(--font-mono)] text-sm text-[#7C8394] ml-6">
+            // investigate onchain footprint & phishing risks
+          </p>
         </div>
 
-        <div className="bg-[#12151C] border border-[#242938] rounded p-4 mb-6">
-          <div className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-sm text-[#38BDF8] mb-2">
-            <span>$</span>
-            <span>scan --wallet</span>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="0x..."
-              className="flex-1 bg-[#0A0C10] border border-[#242938] rounded px-4 py-3 text-[#E6E8EC] placeholder-[#4a5063] font-[family-name:var(--font-mono)] text-sm focus:outline-none focus:border-[#38BDF8] transition-colors"
-            />
+        {/* Input section */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-6 mb-8 shadow-2xl transition-all duration-300 hover:border-white/20 hover:bg-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#38BDF8]/10 blur-3xl rounded-full" />
+          
+          <div className="flex flex-col sm:flex-row gap-3 relative z-10">
+            <div className="relative flex-1 group">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <Wallet size={18} className="text-[#7C8394] group-focus-within:text-[#38BDF8] transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Enter wallet address (0x...)"
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-[#E6E8EC] placeholder-[#4a5063] font-[family-name:var(--font-mono)] text-sm focus:outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition-all"
+              />
+            </div>
             <button
               onClick={handleInvestigate}
               disabled={loading || !address}
-              className="bg-[#FFB020] hover:bg-[#ffc04d] disabled:bg-[#242938] disabled:text-[#4a5063] disabled:cursor-not-allowed text-black rounded px-6 py-3 font-semibold font-[family-name:var(--font-mono)] text-sm transition-colors"
+              className="bg-gradient-to-r from-[#38BDF8] to-[#0ea5e9] hover:from-[#0ea5e9] hover:to-[#0284c7] disabled:from-[#242938] disabled:to-[#242938] disabled:text-[#4a5063] disabled:cursor-not-allowed text-white rounded-xl px-8 py-4 font-bold font-[family-name:var(--font-mono)] text-sm transition-all shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] disabled:shadow-none flex items-center justify-center gap-2 sm:min-w-[140px]"
             >
-              {loading ? "SCANNING" : "RUN"}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="animate-spin" /> SCANNING
+                </div>
+              ) : "INVESTIGATE"}
             </button>
           </div>
         </div>
 
+        {error && (
+          <div className="bg-[#FF3B3B]/10 border border-[#FF3B3B]/30 rounded-xl p-4 mb-8 text-[#FF3B3B] font-[family-name:var(--font-mono)] text-sm flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+            <ShieldAlert size={18} /> {error}
+          </div>
+        )}
+
+        {/* Loader Screen */}
         {loading && (
-          <div className="bg-[#12151C] border border-[#242938] rounded p-6 mb-6 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full border border-[#38BDF8]/20 animate-radar" />
-            <div className="space-y-2 font-[family-name:var(--font-mono)] text-sm relative z-10">
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 mb-6 relative overflow-hidden animate-in fade-in duration-300">
+            <div className="absolute top-1/2 right-10 -translate-y-1/2 w-48 h-48 rounded-full border border-[#38BDF8]/20 animate-radar opacity-50" />
+            <div className="space-y-4 font-[family-name:var(--font-mono)] text-sm relative z-10">
               {INVESTIGATION_STEPS.map((step, i) => (
                 <div
                   key={i}
-                  className={"flex items-center gap-3 transition-opacity duration-300 " + (i <= currentStep ? "opacity-100" : "opacity-30")}
+                  className={"flex items-center gap-4 transition-all duration-500 " + 
+                    (i < currentStep ? "text-[#34D399] opacity-100 translate-x-0" : 
+                     i === currentStep ? "text-[#38BDF8] opacity-100 translate-x-2" : 
+                     "text-[#7C8394] opacity-30 translate-x-0")}
                 >
-                  <span className="w-4 text-[#38BDF8]">
-                    {i < currentStep ? "✓" : i === currentStep ? ">" : " "}
+                  <span className="w-5 shrink-0 flex justify-center">
+                    {i < currentStep ? <CheckCircle2 size={16} /> : i === currentStep ? <Activity size={16} className="animate-spin" /> : " "}
                   </span>
-                  <span className={i === currentStep ? "text-[#E6E8EC]" : "text-[#7C8394]"}>
+                  <span>
                     {step}
-                    {i === currentStep && <span className="animate-blink">_</span>}
+                    {i === currentStep && <span className="animate-blink ml-1">_</span>}
                   </span>
                 </div>
               ))}
@@ -218,187 +261,379 @@ export default function Scan() {
           </div>
         )}
 
-        {error && (
-          <div className="bg-[#FF3B3B]/10 border border-[#FF3B3B]/30 rounded p-4 mb-6 text-[#FF3B3B] font-[family-name:var(--font-mono)] text-sm">
-            ERROR: {error}
-          </div>
-        )}
-
+        {/* Results Screen */}
         {result && !loading && (
-          <div className="space-y-4">
-            <div className="bg-[#12151C] border border-[#242938] rounded p-6 flex items-center gap-6">
-              <svg width="120" height="120" className="shrink-0 -rotate-90">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="#242938" strokeWidth="8" />
-                <circle
-                  cx="60" cy="60" r="54" fill="none"
-                  stroke={severityColor(result.report.threatLevel)}
-                  strokeWidth="8"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={circumference - (displayScore / 100) * circumference}
-                  strokeLinecap="round"
-                  style={{ transition: "stroke-dashoffset 1s ease-out" }}
-                />
-                <text
-                  x="60" y="60" textAnchor="middle" dominantBaseline="middle"
-                  fill="#E6E8EC" fontSize="24" fontWeight="bold"
-                  transform="rotate(90 60 60)"
-                  className="font-[family-name:var(--font-mono)]"
-                >
-                  {displayScore}
-                </text>
-              </svg>
-              <div>
-                <span
-                  className="inline-block px-3 py-1 rounded text-xs font-bold font-[family-name:var(--font-mono)] mb-3"
-                  style={{
-                    color: severityColor(result.report.threatLevel),
-                    backgroundColor: `${severityColor(result.report.threatLevel)}1A`,
-                  }}
-                >
-                  {result.report.threatLevel}
-                </span>
-                <p className="text-[#B4B9C4] text-sm leading-relaxed">
-                  {result.report.summary}
-                </p>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+            
+            {/* Primary Threat Score Card */}
+            <div 
+              className="relative overflow-hidden bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8"
+              style={{ boxShadow: `0 0 40px -10px ${severityGlow(result.report.threatLevel)}` }}
+            >
+              <div 
+                className="absolute inset-0 opacity-10 pointer-events-none" 
+                style={{ 
+                  background: `radial-gradient(circle at top right, ${severityColor(result.report.threatLevel)}, transparent 70%)` 
+                }} 
+              />
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-6">
+                    <span className="text-[#7C8394] font-[family-name:var(--font-mono)] text-sm uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck size={16} /> Threat Analysis
+                    </span>
+                    <span
+                      className="px-4 py-1.5 rounded-full text-xs font-bold font-[family-name:var(--font-mono)] tracking-wider"
+                      style={{
+                        color: severityColor(result.report.threatLevel),
+                        backgroundColor: `${severityColor(result.report.threatLevel)}1A`,
+                        border: `1px solid ${severityColor(result.report.threatLevel)}40`
+                      }}
+                    >
+                      {result.report.threatLevel} RISK
+                    </span>
+                  </div>
+                  <p className="text-[#E6E8EC] text-lg leading-relaxed">{result.report.summary}</p>
+                  
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link
+                      href={`/monitor?address=${address}`}
+                      className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#38BDF8]/50 text-[#38BDF8] rounded-xl px-4 py-2 text-sm font-bold font-[family-name:var(--font-mono)] transition-colors shadow-sm"
+                    >
+                      <Activity size={16} /> MONITOR_WALLET
+                    </Link>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-center justify-center shrink-0">
+                  <div className="relative flex items-center justify-center w-32 h-32">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-white/10" />
+                      <circle 
+                        cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" 
+                        strokeLinecap="round"
+                        strokeDasharray="282.7"
+                        strokeDashoffset={282.7 - (282.7 * displayScore) / 100}
+                        style={{ color: severityColor(result.report.threatLevel) }}
+                        className="transition-all duration-1000 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-4xl font-bold font-[family-name:var(--font-display)]" style={{ color: severityColor(result.report.threatLevel) }}>
+                        {displayScore}
+                      </span>
+                      <span className="text-[10px] font-bold font-[family-name:var(--font-mono)] text-[#7C8394] uppercase tracking-widest mt-1">
+                        Score
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-              <Link
-              href={`/monitor?address=${address}`}
-              className="inline-flex items-center gap-2 bg-[#12151C] hover:bg-[#1a1e28] border border-[#242938] hover:border-[#38BDF8] text-[#38BDF8] rounded px-4 py-2 text-sm font-semibold font-[family-name:var(--font-mono)] transition-colors"
-            >
-              $ monitor --wallet →
-            </Link>
-
-            {result.report.recommendations && (
-              <div className="bg-[#12151C] border border-[#242938] rounded p-6">
-                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-3">
-                  RECOMMENDED_ACTIONS
+            {/* AI Recommendations */}
+            {result.report.recommendations && result.report.recommendations.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-4 flex items-center gap-2">
+                  <Shield size={16} /> RECOMMENDED_ACTIONS
                 </h3>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {result.report.recommendations.map((rec: string, i: number) => (
-                    <li key={i} className="text-[#B4B9C4] text-sm flex gap-2">
-                      <span className="text-[#FFB020] font-[family-name:var(--font-mono)]">→</span>
-                      {rec}
+                    <li key={i} className="text-[#E6E8EC] text-sm flex gap-3 items-start bg-black/30 rounded-lg p-3">
+                      <ChevronRight size={16} className="text-[#38BDF8] shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">{rec}</span>
                     </li>
                   ))}
                 </ul>
-                {result.report.revokeUrl ? (
-                    <a
+                {result.report.revokeUrl && (
+                  <a
                     href={result.report.revokeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block mt-4 bg-[#FF3B3B] hover:bg-[#ff5c5c] text-white rounded px-4 py-2 text-sm font-semibold font-[family-name:var(--font-mono)] transition-colors"
+                    className="inline-flex items-center gap-2 mt-6 bg-[#FF3B3B]/10 hover:bg-[#FF3B3B]/20 text-[#FF3B3B] border border-[#FF3B3B]/30 rounded-xl px-5 py-2.5 text-sm font-bold font-[family-name:var(--font-mono)] transition-colors shadow-sm"
                   >
-                    revoke_approvals →
+                    <AlertTriangle size={16} /> REVOKE_APPROVALS
                   </a>
-                ) : null}
+                )}
               </div>
             )}
 
-            {result.flags && result.flags.length > 0 && (
-              <div className="bg-[#12151C] border border-[#242938] rounded p-6">
-                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-3">
-                  DETECTED_FLAGS [{result.flags.length}]
-                </h3>
-                <div className="space-y-3 font-[family-name:var(--font-mono)] text-sm">
-                  {result.flags.map((flag: any, i: number) => (
-                    <div key={i} className="bg-[#0A0C10] rounded p-3">
-                      <div className="flex items-start gap-3">
-                        <span
-                          className="text-xs shrink-0"
-                          style={{ color: flag.severity === "high" ? "#FF3B3B" : flag.severity === "medium" ? "#FFB020" : "#7C8394" }}
-                        >
-                          [{flag.severity.toUpperCase()}]
-                        </span>
-                        <span className="text-[#B4B9C4]">{flag.message}</span>
+            {/* Active Approvals */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFB020]/5 blur-3xl rounded-full" />
+              <div className="flex justify-between items-center mb-5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] flex items-center gap-2">
+                    <Key size={16} /> ACTIVE_APPROVALS [{result.activeApprovals?.length || 0}]
+                  </h3>
+                  {result.approvalScanMeta && (
+                    <span className="text-[10px] text-[#4a5063] font-[family-name:var(--font-mono)] bg-black/40 px-2 py-0.5 rounded">
+                      ({Number(result.approvalScanMeta.totalScannedBlocks).toLocaleString()} BLOCKS)
+                    </span>
+                  )}
+                </div>
+                {result.activeApprovals && result.activeApprovals.length > 0 && (
+                  <a
+                    href={`https://revoke.cash/address/${address}?chainId=8453`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-[#FF3B3B]/10 hover:bg-[#FF3B3B]/20 text-[#FF3B3B] border border-[#FF3B3B]/30 px-3 py-1.5 rounded-lg font-bold font-[family-name:var(--font-mono)] transition-colors"
+                  >
+                    REVOKE_ALL
+                  </a>
+                )}
+              </div>
+
+              {result.activeApprovals && result.activeApprovals.length > 0 ? (
+                <div className="space-y-3 font-[family-name:var(--font-mono)] text-xs relative z-10">
+                  {result.activeApprovals.map((app: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="bg-black/60 border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#E6E8EC] text-base bg-white/10 px-2 py-0.5 rounded">
+                            {app.tokenSymbol}
+                          </span>
+                          <a
+                            href={`https://basescan.org/token/${app.tokenAddress}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#38BDF8] hover:underline text-[10px] ml-1"
+                          >
+                            {app.tokenAddress.slice(0, 6)}...{app.tokenAddress.slice(-4)} ↗
+                          </a>
+                        </div>
+                        {app.isUnlimited ? (
+                          <span className="px-2 py-1 rounded bg-[#FF3B3B]/15 text-[#FF3B3B] font-bold text-[10px] border border-[#FF3B3B]/30 shadow-[0_0_10px_rgba(255,59,59,0.2)]">
+                            UNLIMITED
+                          </span>
+                        ) : (
+                          <span className="text-[#34D399] font-bold bg-[#34D399]/10 px-2 py-1 rounded border border-[#34D399]/20">
+                            {app.allowanceFormatted} {app.tokenSymbol}
+                          </span>
+                        )}
                       </div>
-                      {flag.details && flag.details.length > 0 ? (
-                        <div className="mt-3 space-y-2 max-h-96 overflow-y-auto">
+
+                      <div className="space-y-2 text-[#B4B9C4]">
+                        <div className="flex justify-between items-center bg-black/40 rounded p-2 border border-white/5">
+                          <span className="text-[#7C8394] text-[10px] uppercase">Spender</span>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={`https://basescan.org/address/${app.spender}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#38BDF8] hover:underline font-bold"
+                            >
+                              {app.spender.slice(0, 8)}...{app.spender.slice(-6)}
+                            </a>
+                            {app.spenderIsContract ? (
+                              <span className="px-2 py-0.5 rounded bg-[#38BDF8]/10 text-[#38BDF8] text-[10px] border border-[#38BDF8]/20 flex items-center gap-1">
+                                <FileCode2 size={10} /> CONTRACT
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-[#FF3B3B]/20 text-[#FF3B3B] text-[10px] font-bold border border-[#FF3B3B]/40 animate-pulse flex items-center gap-1 shadow-[0_0_10px_rgba(255,59,59,0.3)]">
+                                <AlertTriangle size={10} /> EOA / PRIVATE
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center px-1 text-[11px] pt-1">
+                          <span className="text-[#7C8394] flex items-center gap-1">
+                            <History size={12} /> Block #{app.lastUpdatedBlock}
+                          </span>
+                          <a
+                            href={`https://revoke.cash/address/${address}?chainId=8453`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#FFB020] hover:text-[#ffc04d] hover:underline font-bold"
+                          >
+                            Revoke ↗
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 bg-black/40 border border-[#34D399]/20 rounded-xl text-center text-[#34D399] text-xs font-[family-name:var(--font-mono)] flex flex-col items-center gap-2 shadow-[0_0_15px_rgba(52,211,153,0.1)]">
+                  <CheckCircle2 size={24} />
+                  No active unrevoked token approvals detected onchain.
+                </div>
+              )}
+            </div>
+
+            {/* Detected Permits */}
+            {result.permits && result.permits.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-4 flex items-center gap-2">
+                  <FileCode2 size={16} /> DETECTED_PERMITS [{result.permits.length}]
+                </h3>
+                <div className="space-y-3 font-[family-name:var(--font-mono)] text-xs">
+                  {result.permits.map((permit: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="bg-black/60 border border-white/5 rounded-xl p-4 flex justify-between items-center hover:border-white/10 transition-colors"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded bg-[#38BDF8]/10 text-[#38BDF8] text-[10px] border border-[#38BDF8]/20 font-bold tracking-widest">
+                            {permit.type}
+                          </span>
+                          <span className="text-[#7C8394] text-[10px]">
+                            {permit.selector}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#B4B9C4] flex items-center gap-2">
+                          <span className="text-[#7C8394]">Target:</span> 
+                          <span className="bg-white/5 px-2 py-0.5 rounded">{permit.to?.slice(0, 8)}...{permit.to?.slice(-6)}</span>
+                        </div>
+                      </div>
+                      {permit.txHash && (
+                        <a
+                          href={`https://basescan.org/tx/${permit.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-white/5 hover:bg-white/10 text-[#38BDF8] border border-white/5 rounded-lg px-3 py-2 transition-colors font-bold flex items-center gap-1"
+                        >
+                          View <ChevronRight size={14}/>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Detected Flags */}
+            {result.flags && result.flags.length > 0 && (
+              <div className="bg-[#120808]/80 backdrop-blur-xl border border-[#FF3B3B]/20 rounded-2xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[#FF3B3B]/5 blur-3xl rounded-full" />
+                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#FF3B3B] mb-5 flex items-center gap-2">
+                  <AlertTriangle size={16} /> DETECTED_FLAGS [{result.flags.length}]
+                </h3>
+                <div className="space-y-4 font-[family-name:var(--font-mono)] text-sm relative z-10">
+                  {result.flags.map((flag: any, i: number) => (
+                    <div key={i} className="bg-black/60 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-colors">
+                      <div className="flex items-start gap-4 mb-3">
+                        <span
+                          className="mt-0.5"
+                          style={{ color: flag.severity === "high" ? "#FF3B3B" : flag.severity === "medium" ? "#FFB020" : "#38BDF8" }}
+                        >
+                          <ShieldAlert size={20} />
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span 
+                              className="text-xs font-bold font-[family-name:var(--font-mono)] tracking-wider"
+                              style={{ color: flag.severity === "high" ? "#FF3B3B" : flag.severity === "medium" ? "#FFB020" : "#38BDF8" }}
+                            >
+                              {flag.severity.toUpperCase()} RISK
+                            </span>
+                          </div>
+                          <p className="text-[#E6E8EC] leading-relaxed text-sm">{flag.message}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Flag Details / TXs */}
+                      {flag.details && flag.details.length > 0 && (
+                        <div className="ml-9 mt-4 space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                           {flag.details.slice(0, 15).map((d: any, j: number) => {
                             const timestamp = new Date(d.timestamp);
-                            const timeString = timestamp.toLocaleString();
                             return (
-                              <div key={j} className="bg-[#12151C] rounded p-2 border border-[#242938]">
-                                <div className="flex justify-between items-start gap-2 mb-1">
-                                  <span className="text-[#FFB020] font-bold">{d.asset}</span>
-                                  <span className="text-xs text-[#7C8394]">{timeString}</span>
+                              <div key={j} className="bg-white/5 rounded-lg p-3 border border-white/5">
+                                <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5">
+                                  <span className="text-[#FFB020] font-bold text-xs bg-[#FFB020]/10 px-2 py-0.5 rounded">{d.asset}</span>
+                                  <span className="text-[10px] text-[#7C8394]">{timestamp.toLocaleString()}</span>
                                 </div>
-                                <div className="text-xs space-y-1 text-[#B4B9C4]">
+                                <div className="text-[11px] space-y-1.5 text-[#B4B9C4]">
                                   <div className="flex justify-between">
-                                    <span className="text-[#7C8394]">FROM:</span>
-                                    <a href={`https://basescan.org/address/${d.from}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline">
-                                      {d.from}
+                                    <span className="text-[#7C8394]">FROM</span>
+                                    <a href={`https://basescan.org/address/${d.from}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline font-bold">
+                                      {d.from.slice(0,8)}...{d.from.slice(-6)}
                                     </a>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-[#7C8394]">TO:</span>
-                                    <span>{address}</span>
+                                    <span className="text-[#7C8394]">TO</span>
+                                    <span className="font-bold">{address.slice(0,8)}...{address.slice(-6)}</span>
                                   </div>
-                                  {d.value ? (
+                                  {d.value && (
                                     <div className="flex justify-between">
-                                      <span className="text-[#7C8394]">VALUE:</span>
-                                      <span>{d.value}</span>
+                                      <span className="text-[#7C8394]">VALUE</span>
+                                      <span className="text-white font-bold">{d.value}</span>
                                     </div>
-                                  ) : null}
-                                  {d.hash ? (
-                                    <div className="flex justify-between">
-                                      <span className="text-[#7C8394]">HASH:</span>
-                                      <a href={`https://basescan.org/tx/${d.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline truncate max-w-xs">
-                                        {d.hash.slice(0, 10)}...{d.hash.slice(-8)}
+                                  )}
+                                  {d.hash && (
+                                    <div className="flex justify-between pt-1">
+                                      <span className="text-[#7C8394]">TX</span>
+                                      <a href={`https://basescan.org/tx/${d.hash}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline truncate max-w-[120px]">
+                                        {d.hash}
                                       </a>
                                     </div>
-                                  ) : null}
+                                  )}
                                 </div>
                               </div>
                             );
                           })}
-                          {flag.details.length > 15 ? (
-                            <div className="text-xs text-[#4a5063] p-2 text-center">
-                              +{flag.details.length - 15} more token transfers
+                          {flag.details.length > 15 && (
+                            <div className="text-xs text-[#7C8394] p-3 text-center bg-white/5 rounded-lg border border-white/5 border-dashed">
+                              +{flag.details.length - 15} additional transfers omitted
                             </div>
-                          ) : null}
+                          )}
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Fund Trace Analysis */}
             {result.trail && result.trail.length > 0 && (
-              <div className="bg-[#12151C] border border-[#242938] rounded p-6">
-                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-4">
-                  FUND_TRACE_ANALYSIS
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-5 flex items-center gap-2">
+                  <Activity size={16} /> FUND_TRACE_ANALYSIS
                 </h3>
-                <div className="space-y-3 font-[family-name:var(--font-mono)] text-xs">
+                <div className="space-y-4 font-[family-name:var(--font-mono)] text-xs relative before:absolute before:inset-0 before:ml-[15px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
                   {result.trail.map((hop: any, i: number) => (
-                    <div key={i} className="bg-[#0A0C10] border border-[#242938] rounded p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[#7C8394]">HOP {i + 1}</span>
-                        {hop.outflowTo ? <span className="text-[#FF3B3B]">OUTFLOW DETECTED</span> : null}
+                    <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                      
+                      {/* Node circle */}
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full border border-white/20 bg-black/80 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 text-[#38BDF8]">
+                        <Cpu size={14} />
                       </div>
-                      <div className="space-y-1 text-[#B4B9C4]">
-                        <div className="flex justify-between">
-                          <span className="text-[#7C8394]">ADDRESS:</span>
-                          <a href={`https://basescan.org/address/${hop.address}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline">
-                            {hop.address}
-                          </a>
+                      
+                      {/* Card */}
+                      <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] bg-black/60 border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
+                          <span className="text-[#38BDF8] font-bold bg-[#38BDF8]/10 px-2 py-0.5 rounded text-[10px]">HOP {i + 1}</span>
+                          {hop.outflowTo && <span className="text-[#FF3B3B] font-bold text-[10px] bg-[#FF3B3B]/10 px-2 py-0.5 rounded flex items-center gap-1"><ArrowLeft size={10} className="rotate-45"/> OUTFLOW</span>}
                         </div>
-                        {hop.outflowTo ? (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-[#7C8394]">SENT_TO:</span>
-                              <a href={`https://basescan.org/address/${hop.outflowTo}`} target="_blank" rel="noopener noreferrer" className="text-[#38BDF8] hover:underline">
-                                {hop.outflowTo}
-                              </a>
+                        <div className="space-y-2 text-[#B4B9C4]">
+                          <div className="flex flex-col">
+                            <span className="text-[#7C8394] text-[10px] mb-0.5">NODE ADDRESS</span>
+                            <a href={`https://basescan.org/address/${hop.address}`} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#38BDF8] hover:underline font-bold truncate">
+                              {hop.address}
+                            </a>
+                          </div>
+                          {hop.outflowTo && (
+                            <div className="bg-[#FF3B3B]/5 p-2 rounded border border-[#FF3B3B]/10 mt-2 space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[#7C8394] text-[10px]">SENT TO</span>
+                                <a href={`https://basescan.org/address/${hop.outflowTo}`} target="_blank" rel="noopener noreferrer" className="text-[#FF3B3B] hover:underline font-bold truncate max-w-[120px]">
+                                  {hop.outflowTo}
+                                </a>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-[#7C8394] text-[10px]">AMOUNT</span>
+                                <span className="text-white font-bold">{hop.outflowAmount} ETH</span>
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#7C8394]">AMOUNT:</span>
-                              <span className="text-[#FF3B3B] font-bold">{hop.outflowAmount} ETH</span>
-                            </div>
-                          </>
-                        ) : null}
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -406,63 +641,70 @@ export default function Scan() {
               </div>
             )}
 
-            <div className="bg-[#12151C] border border-[#242938] rounded p-6">
-              <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#7C8394] mb-3">
-                ASK_SENTINEL
+            {/* AI Chat Interface */}
+            <div className="bg-black/40 backdrop-blur-xl border border-[#38BDF8]/20 rounded-2xl p-6 relative overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.05)]">
+              <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#38BDF8]/10 blur-[100px] rounded-full pointer-events-none" />
+              <h3 className="font-[family-name:var(--font-mono)] text-xs text-[#38BDF8] mb-5 flex items-center gap-2 relative z-10 font-bold tracking-wider">
+                <Cpu size={16} /> SENTINEL_AI_CORE
               </h3>
 
-              {chatMessages.length > 0 ? (
-                <div className="space-y-3 mb-4 max-h-80 overflow-y-auto">
-                  {chatMessages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}
-                    >
-                      <div
-                        className={
-                          "max-w-[85%] rounded p-3 text-sm " +
-                          (msg.role === "user"
-                            ? "bg-[#38BDF8]/10 text-[#E6E8EC]"
-                            : "bg-[#0A0C10] text-[#B4B9C4] border border-[#242938]")
-                        }
-                      >
-                        {msg.content}
+              <div className="relative z-10">
+                {chatMessages.length > 0 ? (
+                  <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                        <div
+                          className={
+                            "max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed " +
+                            (msg.role === "user"
+                              ? "bg-gradient-to-r from-[#38BDF8]/20 to-[#0ea5e9]/20 text-white border border-[#38BDF8]/30 rounded-br-none"
+                              : "bg-black/60 text-[#B4B9C4] border border-white/10 rounded-bl-none shadow-md")
+                          }
+                        >
+                          {msg.content}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {chatLoading ? (
-                    <div className="flex justify-start">
-                      <div className="bg-[#0A0C10] border border-[#242938] rounded p-3 text-sm text-[#7C8394] font-[family-name:var(--font-mono)]">
-                        thinking<span className="animate-blink">...</span>
+                    ))}
+                    {chatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-black/60 border border-white/10 rounded-2xl rounded-bl-none p-4 text-sm text-[#7C8394] font-[family-name:var(--font-mono)] flex items-center gap-2">
+                          <Activity size={14} className="animate-spin text-[#38BDF8]" /> processing<span className="animate-blink">...</span>
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-[#4a5063] text-sm mb-4">
-                  Ask Sentinel a follow-up question about this investigation — e.g. "should I be worried?" or "what does the outflow mean?"
-                </p>
-              )}
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6 text-center">
+                    <p className="text-[#B4B9C4] text-sm">
+                      Have questions about this investigation? Ask the Sentinel AI Core.
+                    </p>
+                    <p className="text-[#7C8394] text-xs mt-2 font-[family-name:var(--font-mono)]">
+                      e.g. &quot;What should I do first?&quot; or &quot;Explain the outflow to me.&quot;
+                    </p>
+                  </div>
+                )}
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
-                  placeholder="Ask a question..."
-                  disabled={chatLoading}
-                  className="flex-1 bg-[#0A0C10] border border-[#242938] rounded px-4 py-2 text-[#E6E8EC] placeholder-[#4a5063] font-[family-name:var(--font-mono)] text-sm focus:outline-none focus:border-[#38BDF8] transition-colors"
-                />
-                <button
-                  onClick={handleChatSend}
-                  disabled={chatLoading || !chatInput.trim()}
-                  className="bg-[#38BDF8] hover:bg-[#5fd1ff] disabled:bg-[#242938] disabled:text-[#4a5063] disabled:cursor-not-allowed text-black rounded px-4 py-2 text-sm font-semibold font-[family-name:var(--font-mono)] transition-colors"
-                >
-                  SEND
-                </button>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
+                    placeholder="Query the AI engine..."
+                    disabled={chatLoading}
+                    className="flex-1 bg-black/60 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-[#7C8394] font-[family-name:var(--font-mono)] text-sm focus:outline-none focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8] transition-all"
+                  />
+                  <button
+                    onClick={handleChatSend}
+                    disabled={chatLoading || !chatInput.trim()}
+                    className="bg-[#38BDF8] hover:bg-[#0ea5e9] disabled:bg-white/5 disabled:text-[#4a5063] disabled:cursor-not-allowed text-black rounded-xl px-6 py-4 text-sm font-bold font-[family-name:var(--font-mono)] transition-all flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.3)] disabled:shadow-none min-w-[100px]"
+                  >
+                    {chatLoading ? <Activity size={18} className="animate-spin" /> : <Send size={18} />}
+                  </button>
+                </div>
               </div>
             </div>
+
           </div>
         )}
       </div>
