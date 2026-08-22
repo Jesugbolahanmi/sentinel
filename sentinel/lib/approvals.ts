@@ -333,7 +333,9 @@ export async function getActiveApprovals(ownerAddress: string): Promise<{
 }
 
 /**
- * Detect direct EIP-2612 or DAI-style permit transactions in transaction logs/history.
+ * Detect direct EIP-2612 or DAI-style permit transactions.
+ * Fetches real calldata via publicClient.getTransaction — alchemy_getAssetTransfers
+ * never includes input, so we cannot rely on tx.input from the transfer array.
  */
 export async function detectPermitTransactions(
   address: string,
@@ -341,32 +343,57 @@ export async function detectPermitTransactions(
 ): Promise<DetectedPermit[]> {
   const detectedPermits: DetectedPermit[] = [];
 
-  for (const tx of transactions) {
-    const input = (tx.input || "").toLowerCase();
-    const hash = tx.hash || tx.transactionHash || "";
+  // Permits are initiated by the wallet owner — only outgoing txs matter.
+  // Limit to 30 most recent to keep RPC usage bounded.
+  const outgoingTxs = transactions
+    .filter((tx) => tx.from?.toLowerCase() === address.toLowerCase() && tx.hash)
+    .slice(0, 30);
 
-    if (!input || input === "0x") continue;
+  if (outgoingTxs.length === 0) return [];
 
-    if (input.startsWith(EIP2612_PERMIT_SELECTOR)) {
-      detectedPermits.push({
-        type: "EIP-2612",
-        selector: EIP2612_PERMIT_SELECTOR,
-        txHash: hash,
-        from: tx.from,
-        to: tx.to,
-        timestamp: tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toISOString() : undefined,
-        blockNumber: tx.blockNum || tx.blockNumber,
-      });
-    } else if (input.startsWith(DAI_PERMIT_SELECTOR)) {
-      detectedPermits.push({
-        type: "DAI-Permit",
-        selector: DAI_PERMIT_SELECTOR,
-        txHash: hash,
-        from: tx.from,
-        to: tx.to,
-        timestamp: tx.timeStamp ? new Date(parseInt(tx.timeStamp) * 1000).toISOString() : undefined,
-        blockNumber: tx.blockNum || tx.blockNumber,
-      });
+  // Fetch real calldata in batches of 5
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < outgoingTxs.length; i += BATCH_SIZE) {
+    const batch = outgoingTxs.slice(i, i + BATCH_SIZE);
+
+    const txDatas = await Promise.allSettled(
+      batch.map((tx) =>
+        publicClient.getTransaction({ hash: tx.hash as `0x${string}` })
+      )
+    );
+
+    for (let j = 0; j < batch.length; j++) {
+      const result = txDatas[j];
+      if (result.status !== "fulfilled" || !result.value?.input) continue;
+
+      const input = result.value.input.toLowerCase();
+      const sourceTx = batch[j];
+
+      if (input.startsWith(EIP2612_PERMIT_SELECTOR)) {
+        detectedPermits.push({
+          type: "EIP-2612",
+          selector: EIP2612_PERMIT_SELECTOR,
+          txHash: sourceTx.hash,
+          from: sourceTx.from,
+          to: sourceTx.to,
+          timestamp: sourceTx.timeStamp
+            ? new Date(parseInt(sourceTx.timeStamp) * 1000).toISOString()
+            : undefined,
+          blockNumber: sourceTx.blockNum || sourceTx.blockNumber,
+        });
+      } else if (input.startsWith(DAI_PERMIT_SELECTOR)) {
+        detectedPermits.push({
+          type: "DAI-Permit",
+          selector: DAI_PERMIT_SELECTOR,
+          txHash: sourceTx.hash,
+          from: sourceTx.from,
+          to: sourceTx.to,
+          timestamp: sourceTx.timeStamp
+            ? new Date(parseInt(sourceTx.timeStamp) * 1000).toISOString()
+            : undefined,
+          blockNumber: sourceTx.blockNum || sourceTx.blockNumber,
+        });
+      }
     }
   }
 

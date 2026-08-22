@@ -3,7 +3,7 @@ import { getWalletTransactions, classifyAddress } from "@/lib/basescan";
 import { runAllChecks } from "@/lib/rules";
 import { generateThreatReport } from "@/lib/report";
 import { traceFunds } from "@/lib/trace";
-import { scanApprovalsAndPermits } from "@/lib/approvals";
+import { getActiveApprovals, detectPermitTransactions } from "@/lib/approvals";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,16 +32,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const [transactions, approvalScanResult] = await Promise.all([
+    // Run transaction fetch and approval log scan in parallel — independent data sources
+    const [transactions, approvalsData] = await Promise.all([
       getWalletTransactions(address),
-      scanApprovalsAndPermits(address),
+      getActiveApprovals(address),
     ]);
+
+    // Permit detection requires real calldata from getTransaction —
+    // must run after transactions are fetched (needs tx hashes)
+    const permits = await detectPermitTransactions(address, transactions);
 
     const flags = await runAllChecks(
       transactions,
       address,
-      approvalScanResult.activeApprovals,
-      approvalScanResult.permits
+      approvalsData.activeApprovals,
+      permits
     );
 
     const report = await generateThreatReport(address, flags);
@@ -55,12 +60,12 @@ export async function POST(req: NextRequest) {
       flags,
       report,
       trail,
-      activeApprovals: approvalScanResult.activeApprovals,
-      permits: approvalScanResult.permits,
+      activeApprovals: approvalsData.activeApprovals,
+      permits,
       approvalScanMeta: {
-        totalScannedBlocks: approvalScanResult.totalScannedBlocks,
-        startBlock: approvalScanResult.startBlock,
-        endBlock: approvalScanResult.endBlock,
+        totalScannedBlocks: approvalsData.totalScannedBlocks,
+        startBlock: approvalsData.startBlock,
+        endBlock: approvalsData.endBlock,
       },
     });
   } catch (error) {

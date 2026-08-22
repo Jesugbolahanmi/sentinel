@@ -11,9 +11,9 @@ import {
 const THREAT_FEED = [
   { time: "00:03", type: "HIGH", msg: "Unlimited approval to unverified contract detected" },
   { time: "00:07", type: "CRIT", msg: "Wallet drained via EIP-2612 permit exploit" },
-  { time: "00:12", type: "MED",  msg: "Honeypot token identified — sell function disabled" },
+  { time: "00:12", type: "MED",  msg: "Honeypot token identified, sell function disabled" },
   { time: "00:18", type: "HIGH", msg: "Cross-chain bridge phishing attempt flagged" },
-  { time: "00:24", type: "CRIT", msg: "EOA approved as spender — private key risk" },
+  { time: "00:24", type: "CRIT", msg: "EOA approved as spender, private key risk" },
   { time: "00:31", type: "MED",  msg: "Suspicious deployer reused across 14 contracts" },
   { time: "00:38", type: "HIGH", msg: "NFT collection minted from flagged wallet cluster" },
 ];
@@ -31,21 +31,21 @@ const HOW_IT_WORKS = [
   {
     step: "02",
     title: "Sentinel investigates onchain",
-    desc: "Reads real Approval events, traces fund movement, checks deployer history, queries live market data — all from Base.",
+    desc: "Reads real Approval events, traces fund movement, checks deployer history, queries live market data on Base.",
     icon: Cpu,
     color: "#FFB020",
   },
   {
     step: "03",
     title: "Threats are scored & explained",
-    desc: "Every flag is backed by a transaction hash. A deterministic risk score is computed and an AI agent explains what it means in plain language.",
+    desc: "Every flag is backed by a transaction hash. A deterministic risk score is computed.",
     icon: ShieldCheck,
     color: "#A855F7",
   },
   {
     step: "04",
-    title: "You act — before it's too late",
-    desc: "Revoke dangerous approvals, monitor wallets for ongoing activity, and get actionable mitigation steps — not just data dumps.",
+    title: "You act before it's too late",
+    desc: "Revoke dangerous approvals, monitor wallets for ongoing activity, and get actionable mitigation steps.",
     icon: TrendingUp,
     color: "#34D399",
   },
@@ -121,8 +121,7 @@ export default function Landing() {
             Every wallet has a story. Most people never know theirs.
           </p>
           <p className="text-[#7C8394] text-sm sm:text-base mb-12 leading-relaxed max-w-xl mx-auto">
-            Sentinel reads the onchain truth — approvals, permits, fund trails, contract risks —
-            and tells you exactly what happened, before it&apos;s too late.
+            Sentinel reads the onchain truth like approvals, permits, fund trails, and contract risks, and tells you exactly what happened before it&apos;s too late.
           </p>
 
           {/* CTA buttons */}
@@ -147,7 +146,7 @@ export default function Landing() {
           <div className="bg-black/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-5 max-w-xl mx-auto text-left shadow-[0_0_30px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between mb-3">
               <span className="font-[family-name:var(--font-mono)] text-[10px] text-[#7C8394] uppercase tracking-widest flex items-center gap-2">
-                <Activity size={10} className="animate-pulse text-[#FF3B3B]" /> LIVE THREAT FEED — BASE NETWORK
+                <Activity size={10} className="animate-pulse text-[#FF3B3B]" /> LIVE THREAT FEED BASE NETWORK
               </span>
               <span className="text-[10px] font-[family-name:var(--font-mono)] text-[#4a5063] bg-black/60 px-2 py-0.5 rounded">SIMULATED</span>
             </div>
@@ -196,11 +195,11 @@ export default function Landing() {
           </h2>
           <p className="text-[#7C8394] text-base sm:text-lg leading-relaxed mb-6">
             A single unlimited approval. A DAI-style permit signed in a hurry. A token contract with
-            a disabled sell function. These are the breadcrumbs that drain wallets silently — while
+            a disabled sell function. These are the breadcrumbs that drain wallets silently while
             explorers show nothing unusual.
           </p>
           <p className="text-[#B4B9C4] text-base sm:text-lg leading-relaxed">
-            Sentinel was built to read those breadcrumbs — before they become a crime scene.
+            Sentinel was built to read those breadcrumbs before they become a crime scene.
           </p>
         </div>
       </section>
@@ -223,7 +222,7 @@ export default function Landing() {
               Investigation, not speculation.
             </h2>
             <p className="text-[#7C8394] text-base sm:text-lg mt-4 max-w-xl mx-auto">
-              Every step Sentinel takes is deterministic — tied to real transaction hashes on Base.
+              Every step Sentinel takes is deterministic, tied to real transaction hashes on Base.
             </p>
           </div>
 
@@ -265,7 +264,7 @@ export default function Landing() {
               Three lenses. One truth.
             </h2>
             <p className="text-[#7C8394] text-base max-w-lg mx-auto">
-              Whether you&apos;re a DeFi trader, NFT collector, or building on Base — Sentinel has you covered.
+              Whether you&apos;re a DeFi trader, NFT collector, or building on Base, Sentinel has you covered.
             </p>
           </div>
 
@@ -276,7 +275,7 @@ export default function Landing() {
                 accent: "#38BDF8",
                 label: "WALLET SCAN",
                 title: "Full wallet forensics",
-                desc: "Approvals, permits, fund flows, risk score — the complete onchain picture for any address.",
+                desc: "Approvals, permits, fund flows, risk score, the complete onchain picture for any address.",
                 icon: Shield,
               },
               {
@@ -284,7 +283,7 @@ export default function Landing() {
                 accent: "#FFB020",
                 label: "TOKEN SCAN",
                 title: "Contract integrity audit",
-                desc: "Honeypot detection, liquidity analysis, market data — before you ape in.",
+                desc: "Honeypot detection, liquidity analysis, market data before you ape in.",
                 icon: TrendingUp,
               },
               {
@@ -364,7 +363,7 @@ export default function Landing() {
               <span className="relative w-2 h-2 rounded-full bg-[#38BDF8]" />
             </div>
             <span className="font-[family-name:var(--font-display)] font-bold text-white tracking-widest text-sm">SENTINEL</span>
-            <span className="font-[family-name:var(--font-mono)] text-[10px] text-[#4a5063] bg-white/5 border border-white/10 px-2 py-0.5 rounded">v1.0 — BASE</span>
+            <span className="font-[family-name:var(--font-mono)] text-[10px] text-[#4a5063] bg-white/5 border border-white/10 px-2 py-0.5 rounded">v1.0 BASE</span>
           </div>
           <p className="font-[family-name:var(--font-mono)] text-[11px] text-[#4a5063] text-center">
             Built for every onchain normie, guru or new.

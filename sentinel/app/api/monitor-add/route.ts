@@ -9,6 +9,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Address is required" }, { status: 400 });
     }
 
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return NextResponse.json(
+        { error: "Invalid Ethereum address format" },
+        { status: 400 }
+      );
+    }
+
     const normalized = address.toLowerCase();
 
     const { data: existing } = await supabase
