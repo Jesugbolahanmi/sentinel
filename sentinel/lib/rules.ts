@@ -17,7 +17,7 @@ export interface TokenDetail {
 
 export interface Flag {
   type: string;
-  severity: "low" | "medium" | "high";
+  severity: "low" | "medium" | "high" | "critical";
   message: string;
   details?: TokenDetail[];
 }
@@ -130,11 +130,22 @@ export function checkPhishingTokenNames(transfers: any[]): Flag | null {
   };
 }
 
-export function checkApprovalRisks(
+// Mock known safe contracts on Base for contextual scoring
+const KNOWN_SAFE_CONTRACTS = [
+  "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad", // Uniswap Universal Router
+  "0x2626664c2603336e57b271c5c0b26f421741e481", // Uniswap V3 Router
+  "0x000000000022d473030f116ddee9f6b43ac78ba3", // Permit2
+];
+
+export async function checkApprovalRisks(
   approvals: ActiveApproval[] = [],
   permits: DetectedPermit[] = []
-): Flag[] {
+): Promise<Flag[]> {
   const flags: Flag[] = [];
+
+  // Fetch blocklist for contextual scoring
+  const { data: blocklist } = await supabase.from("blocklist").select("address, reason");
+  const blockedSet = new Set((blocklist || []).map((b: any) => b.address.toLowerCase()));
 
   // Check for EOA approvals (approving a non-contract account)
   const eoaApprovals = approvals.filter((a) => !a.spenderIsContract);
@@ -151,20 +162,36 @@ export function checkApprovalRisks(
     });
   }
 
-  // Check for unlimited approvals
+  // Check for unlimited approvals with contextual scoring
   const unlimitedApprovals = approvals.filter((a) => a.isUnlimited);
-  if (unlimitedApprovals.length > 0) {
-    flags.push({
-      type: "UNLIMITED_APPROVAL",
-      severity: unlimitedApprovals.length >= 3 || eoaApprovals.length > 0 ? "high" : "medium",
-      message: `Wallet has ${unlimitedApprovals.length} active unlimited token approval(s) — tokens can be drained at any time if the spender contract is exploited or malicious.`,
-      details: unlimitedApprovals.map((a) => ({
-        asset: `${a.tokenSymbol} (UNLIMITED)`,
-        from: a.spender,
-        timestamp: new Date().toISOString(),
-      })),
-    });
-  } else if (approvals.length >= 3) {
+  for (const a of unlimitedApprovals) {
+    const spenderNormalized = a.spender.toLowerCase();
+    
+    if (blockedSet.has(spenderNormalized)) {
+      flags.push({
+        type: "UNLIMITED_APPROVAL_MALICIOUS",
+        severity: "critical",
+        message: `CRITICAL: Unlimited approval granted to known malicious contract. Immediate revocation required.`,
+        details: [{ asset: `${a.tokenSymbol} (UNLIMITED)`, from: a.spender, timestamp: new Date().toISOString() }],
+      });
+    } else if (KNOWN_SAFE_CONTRACTS.includes(spenderNormalized)) {
+      flags.push({
+        type: "UNLIMITED_APPROVAL_SAFE",
+        severity: "low",
+        message: `Unlimited approval granted to verified safe contract (e.g. Uniswap/Permit2). Low risk.`,
+        details: [{ asset: `${a.tokenSymbol} (UNLIMITED)`, from: a.spender, timestamp: new Date().toISOString() }],
+      });
+    } else {
+      flags.push({
+        type: "UNLIMITED_APPROVAL_UNKNOWN",
+        severity: "high",
+        message: `Unlimited approval granted to unknown contract. High risk if contract is exploited.`,
+        details: [{ asset: `${a.tokenSymbol} (UNLIMITED)`, from: a.spender, timestamp: new Date().toISOString() }],
+      });
+    }
+  }
+
+  if (unlimitedApprovals.length === 0 && approvals.length >= 3) {
     flags.push({
       type: "EXPOSED_APPROVALS",
       severity: "medium",
@@ -221,7 +248,7 @@ export async function runAllChecks(
   const blocklistFlag = await checkBlocklist(transactions);
   if (blocklistFlag) flags.push(blocklistFlag);
 
-  const approvalFlags = checkApprovalRisks(approvals, permits);
+  const approvalFlags = await checkApprovalRisks(approvals, permits);
   flags.push(...approvalFlags);
 
   return flags;

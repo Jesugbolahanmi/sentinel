@@ -8,7 +8,7 @@ export function getRevokeLink(address: string) {
 }
 
 export function calculateRiskScore(flags: Flag[]): number {
-  const weights = { high: 30, medium: 15, low: 5 };
+  const weights = { critical: 70, high: 30, medium: 15, low: 5 };
   const raw = flags.reduce((sum, f) => sum + weights[f.severity], 0);
   return Math.min(raw, 100);
 }
@@ -34,7 +34,7 @@ export async function generateThreatReport(address: string, flags: Flag[], entit
     };
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `You are Sentinel, an AI Web3 incident-response agent. A deterministic scoring system has already calculated this ${entityType}'s risk score and threat level from its flagged activity — do not invent or change these numbers, only explain them.
 
@@ -55,7 +55,12 @@ Respond ONLY with valid JSON in this exact shape, no markdown formatting, no cod
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const jsonString = jsonMatch ? jsonMatch[0] : text;
+    const jsonString = jsonMatch ? jsonMatch[0] : null;
+
+    if (!jsonString) {
+      throw new Error("No JSON object found in Gemini response");
+    }
+
     const parsed = JSON.parse(jsonString);
 
     return {
