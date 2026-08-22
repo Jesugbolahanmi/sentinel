@@ -64,10 +64,7 @@ export async function getWalletTransactions(address: string) {
   .sort((a, b) => parseInt(b.timeStamp) - parseInt(a.timeStamp));
 }
 
-export async function getTokenApprovals(address: string) {
-  // reuse the same transfer data for MVP - real approval events come later
-  return getWalletTransactions(address);
-}
+
 export async function getTokenMetadata(address: string) {
   const metadata = await alchemyCall("alchemy_getTokenMetadata", [address]);
   return metadata;
@@ -78,20 +75,7 @@ export async function isContract(address: string) {
   return code && code !== "0x";
 }
 
-export async function getApprovalEvents(address: string) {
-  // ERC-20 Approval event topic: Approval(address indexed owner, address indexed spender, uint256 value)
-  const APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
 
-  const paddedAddress = "0x" + address.slice(2).padStart(64, "0");
-
-  const logs = await alchemyCall("eth_getLogs", [{
-    fromBlock: "0x0",
-    toBlock: "latest",
-    topics: [APPROVAL_TOPIC, paddedAddress],
-  }]);
-
-  return logs || [];
-}
 
 export async function classifyAddress(address: string) {
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
